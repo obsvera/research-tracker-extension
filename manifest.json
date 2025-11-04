@@ -1,0 +1,52 @@
+{
+  "manifest_version": 2,
+  "name": "Research Paper Tracker",
+  "version": "1.0.0",
+  "description": "Capture research papers from academic sites directly to your Research Paper Tracker",
+  
+  "icons": {
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png"
+  },
+  
+  "permissions": [
+    "activeTab",
+    "storage",
+    "contextMenus",
+    "downloads",
+    "clipboardWrite",
+    "<all_urls>"
+  ],
+  
+  "background": {
+    "scripts": ["background.js"]
+  },
+  
+  "browser_action": {
+    "default_icon": {
+      "48": "icons/icon-48.png"
+    },
+    "default_title": "Capture Research Paper",
+    "default_popup": "popup.html"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": ["content-script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  
+  "web_accessible_resources": [
+    "icons/*"
+  ]
+}

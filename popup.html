@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 400px;
+      min-height: 300px;
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #4a90e2;
+    }
+    
+    h2 {
+      margin: 0 0 4px 0;
+      color: #2c3e50;
+      font-size: 18px;
+    }
+    
+    .subtitle {
+      color: #666;
+      font-size: 12px;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #4a90e2;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #357abd;
+    }
+    
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #555;
+    }
+    
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+    
+    .btn-success {
+      background: #28a745;
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background: #218838;
+    }
+    
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #c82333;
+    }
+    
+    .status {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      text-align: center;
+      font-size: 13px;
+    }
+    
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .status.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    
+    .papers-list {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 12px;
+    }
+    
+    .paper-item {
+      padding: 10px;
+      margin-bottom: 8px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border-left: 3px solid #4a90e2;
+    }
+    
+    .paper-title {
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+    
+    .paper-meta {
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 6px;
+    }
+    
+    .paper-actions {
+      display: flex;
+      gap: 6px;
+    }
+    
+    .paper-actions button {
+      flex: none;
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+    }
+    
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+    
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+    
+    .stat-item {
+      text-align: center;
+    }
+    
+    .stat-number {
+      font-size: 24px;
+      font-weight: 700;
+      color: #4a90e2;
+    }
+    
+    .stat-label {
+      font-size: 11px;
+      color: #666;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>📚 Research Paper Tracker</h2>
+    <div class="subtitle">Firefox Extension</div>
+  </div>
+  
+  <div id="status" class="status" style="display: none;"></div>
+  
+  <div class="stats" id="stats">
+    <div class="stat-item">
+      <div class="stat-number" id="paperCount">0</div>
+      <div class="stat-label">Saved Papers</div>
+    </div>
+  </div>
+  
+  <div class="button-group">
+    <button class="btn-primary" id="captureBtn">📄 Capture This Page</button>
+  </div>
+  
+  <div class="button-group">
+    <button class="btn-success" id="openTrackerBtn">🚀 Open Tracker</button>
+    <button class="btn-secondary" id="optionsBtn">⚙️ Options</button>
+  </div>
+  
+  <div class="button-group">
+    <button class="btn-secondary" id="exportJsonBtn">📥 Export JSON</button>
+    <button class="btn-secondary" id="exportCsvBtn">📊 Export CSV</button>
+  </div>
+  
+  <div class="button-group">
+    <button class="btn-danger" id="clearBtn">🗑️ Clear All</button>
+  </div>
+  
+  <div id="papersList" class="papers-list"></div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
