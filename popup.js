@@ -115,8 +115,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    // Create JSON file
-    const dataStr = JSON.stringify(papers, null, 2);
+    const exportData = buildTrackerJsonExport(papers);
+    const dataStr = JSON.stringify(exportData, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     
     // Download the file
@@ -605,8 +605,93 @@ async function savePaperMetadata(metadata) {
     throw new Error('Duplicate paper');
   }
   
+  applyTrackerDefaults(metadata);
   metadata.savedAt = new Date().toISOString();
   papers.push(metadata);
   
   await browser.storage.local.set({ savedPapers: papers });
+}
+
+function buildTrackerJsonExport(papers) {
+  const exportDate = new Date().toISOString();
+  
+  return {
+    metadata: {
+      exportDate,
+      version: '1.0',
+      source: 'research-tracker-extension',
+      totalPapers: papers.length
+    },
+    papers: papers.map((paper, index) => normalizePaperForTracker(paper, index))
+  };
+}
+
+function normalizePaperForTracker(paper, index) {
+  const dateAdded = (paper.savedAt || new Date().toISOString()).split('T')[0];
+  const doiOrUrl = paper.doi || paper.url || '';
+  
+  return {
+    id: paper.id || index + 1,
+    itemType: inferItemType(paper.publicationType || paper.itemType),
+    title: paper.title || '',
+    authors: paper.authors || '',
+    year: paper.year || '',
+    keywords: paper.keywords || '',
+    journal: paper.journal || '',
+    volume: paper.volume || '',
+    issue: paper.issue || '',
+    pages: paper.pages || '',
+    doi: doiOrUrl,
+    url: paper.url || doiOrUrl,
+    issn: paper.issn || '',
+    chapter: paper.chapter || '',
+    abstract: paper.abstract || '',
+    relevance: paper.relevance || '',
+    status: paper.status || 'to-read',
+    priority: paper.priority || 'medium',
+    rating: paper.rating || '',
+    dateAdded,
+    keyPoints: paper.keyPoints || '',
+    notes: paper.notes || '',
+    language: paper.language || 'en',
+    citation: paper.citation || '',
+    pdf: paper.pdf || '',
+    pdfPath: paper.pdfPath || '',
+    pdfFilename: paper.pdfFilename || '',
+    hasPDF: Boolean(paper.hasPDF),
+    pdfSource: paper.pdfSource || 'none'
+  };
+}
+
+function inferItemType(publicationType = '') {
+  const type = (publicationType || '').toLowerCase();
+  
+  if (type.includes('conference')) return 'inproceedings';
+  if (type.includes('book')) return 'inbook';
+  if (type.includes('chapter')) return 'incollection';
+  if (type.includes('thesis')) return 'phdthesis';
+  if (type.includes('report')) return 'techreport';
+  if (type.includes('preprint') || type.includes('working')) return 'misc';
+  if (type.includes('journal') || type.includes('article')) return 'article';
+  
+  return 'article';
+}
+
+function applyTrackerDefaults(paper) {
+  paper.itemType = inferItemType(paper.publicationType || paper.itemType);
+  paper.status = paper.status || 'to-read';
+  paper.priority = paper.priority || 'medium';
+  paper.rating = paper.rating || '';
+  paper.language = paper.language || 'en';
+  paper.chapter = paper.chapter || '';
+  paper.keyPoints = paper.keyPoints || '';
+  paper.notes = paper.notes || '';
+  paper.issn = paper.issn || '';
+  paper.relevance = paper.relevance || '';
+  paper.citation = paper.citation || '';
+  paper.pdf = paper.pdf || '';
+  paper.pdfPath = paper.pdfPath || '';
+  paper.pdfFilename = paper.pdfFilename || '';
+  paper.hasPDF = Boolean(paper.hasPDF);
+  paper.pdfSource = paper.pdfSource || 'none';
 }
