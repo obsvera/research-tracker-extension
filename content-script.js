@@ -8,7 +8,8 @@ function cleanText(text) {
 
 // Helper function to extract meta tag content
 function getMeta(name) {
-  const meta = document.querySelector(`meta[name="${name}"], meta[property="${name}"]`);
+  const scope = document.head || document;
+  const meta = scope.querySelector(`meta[name="${name}"], meta[property="${name}"]`);
   return meta ? cleanText(meta.getAttribute('content')) : '';
 }
 
@@ -229,6 +230,41 @@ function extractPaperMetadata() {
     }
   }
   
+  // ScienceDirect
+  else if (hostname.includes('sciencedirect.com')) {
+    const sdTitle = document.querySelector('h1, .title-text');
+    if (sdTitle && !metadata.title) {
+      metadata.title = cleanText(sdTitle.textContent);
+    }
+    
+    const sdAuthors = extractScienceDirectAuthors();
+    if (sdAuthors.length > 0) {
+      metadata.authors = sdAuthors.join(', ');
+    }
+    
+    const sdJournal = getMeta('citation_journal_title') || cleanText(document.querySelector('.publication-title-link')?.textContent);
+    if (sdJournal) metadata.journal = sdJournal;
+    
+    const sdYear = getMeta('citation_publication_date')?.substring(0, 4);
+    if (sdYear) metadata.year = sdYear;
+    
+    const sdVolume = getMeta('citation_volume') || cleanText(document.querySelector('[data-testid="article-volume"]')?.textContent);
+    if (sdVolume) metadata.volume = sdVolume;
+    
+    const sdIssue = getMeta('citation_issue') || cleanText(document.querySelector('[data-testid="article-issue"]')?.textContent);
+    if (sdIssue) metadata.issue = sdIssue;
+    
+    const sdPages = getMeta('citation_firstpage') && getMeta('citation_lastpage')
+      ? `${getMeta('citation_firstpage')}-${getMeta('citation_lastpage')}`
+      : cleanText(document.querySelector('[data-testid="article-page-range"]')?.textContent);
+    if (sdPages) metadata.pages = sdPages;
+    
+    const sdDoi = getMeta('citation_doi') || getMeta('DC.identifier');
+    if (sdDoi) {
+      metadata.doi = sdDoi.startsWith('http') ? sdDoi : `https://doi.org/${sdDoi}`;
+    }
+  }
+  
   // Try standard meta tags for any site (fallback)
   if (!metadata.title) {
     metadata.title = getMeta('citation_title') || 
@@ -240,14 +276,18 @@ function extractPaperMetadata() {
   
   if (!metadata.authors) {
     // Authors from citation meta tags
-    const authorMetas = document.querySelectorAll('meta[name="citation_author"], meta[name="DC.creator"], meta[name="author"]');
+    const scope = document.head || document;
+    const authorMetas = scope.querySelectorAll('meta[name="citation_author"], meta[name="DC.creator"], meta[name="author"]');
     if (authorMetas.length > 0) {
       const rawAuthors = Array.from(authorMetas)
         .map(meta => cleanText(meta.getAttribute('content')))
         .filter(author => author && author.length > 0);
       
       console.log('Raw authors from meta tags:', rawAuthors);
-      metadata.authors = rawAuthors.join(', ');
+      const prioritized = prioritizeLikelyAuthors(rawAuthors);
+      if (prioritized.length > 0) {
+        metadata.authors = prioritized.join(', ');
+      }
     }
     
     // Try other common author selectors if still no authors
@@ -267,6 +307,9 @@ function extractPaperMetadata() {
           const uniqueAuthors = new Set();
           
           Array.from(authorElements).forEach(el => {
+            if (shouldExcludeAuthorElement(el)) {
+              return;
+            }
             const authorText = cleanText(el.textContent);
             
             // Filter out non-author text
@@ -456,4 +499,103 @@ function checkIfAcademicSite() {
 // Notify background script if we're on an academic site
 if (checkIfAcademicSite()) {
   browser.runtime.sendMessage({ action: 'academicSiteDetected' });
+}
+
+function shouldExcludeAuthorElement(element) {
+  if (!element) return true;
+  
+  const excludedSelectors = [
+    '#recommendedArticles',
+    '#suggestedArticles',
+    '#relatedContent',
+    '.recommended-articles',
+    '.related-articles',
+    '.recommended',
+    '.references',
+    '.cited-by',
+    '[data-testid="related-articles"]',
+    '[data-testid="recommended-content"]',
+    '[aria-label*="Recommended"]',
+    '[aria-label*="Related"]'
+  ];
+  
+  let current = element;
+  while (current && current !== document.body) {
+    if (excludedSelectors.some(selector => {
+      try {
+        return current.matches(selector);
+      } catch (err) {
+        return false;
+      }
+    })) {
+      return true;
+    }
+    current = current.parentElement;
+  }
+  
+  return false;
+}
+
+function extractScienceDirectAuthors() {
+  const containerSelectors = [
+    '.AuthorGroups',
+    '[data-testid="author-list"]',
+    '[aria-label="Authors"]'
+  ];
+  
+  const containers = containerSelectors
+    .map(selector => document.querySelector(selector))
+    .filter(Boolean);
+  
+  if (containers.length === 0) {
+    return [];
+  }
+  
+  const names = new Set();
+  
+  containers.forEach(container => {
+    container.querySelectorAll('[data-testid="author-name"], .author-name, .author').forEach(node => {
+      if (shouldExcludeAuthorElement(node)) return;
+      const text = cleanAuthorString(node.textContent || '');
+      if (text) {
+        names.add(text);
+      }
+    });
+    
+    container.querySelectorAll('span[itemprop="name"]').forEach(node => {
+      if (shouldExcludeAuthorElement(node)) return;
+      const text = cleanAuthorString(node.textContent || '');
+      if (text) {
+        names.add(text);
+      }
+    });
+  });
+  
+  return prioritizeLikelyAuthors(Array.from(names));
+}
+
+function cleanAuthorString(name) {
+  if (!name) return '';
+  const cleaned = cleanText(name)
+    .replace(/\d+/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/[\|\u2022·•;]/g, ',')
+    .trim();
+  return cleaned.length >= 2 && cleaned.length <= 100 ? cleaned : '';
+}
+
+function prioritizeLikelyAuthors(authorList) {
+  if (!Array.isArray(authorList)) return [];
+  
+  const unique = Array.from(new Set(authorList.filter(Boolean)));
+  if (unique.length <= 6) {
+    return unique;
+  }
+  
+  const concise = unique.filter(name => name.split(' ').length <= 4);
+  if (concise.length > 0 && concise.length <= 6) {
+    return concise;
+  }
+  
+  return unique.slice(0, 6);
 }

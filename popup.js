@@ -1,6 +1,12 @@
 // Popup Script - Handles user interactions in the popup
 
 document.addEventListener('DOMContentLoaded', () => {
+  const manifest = browser.runtime.getManifest();
+  const versionBadge = document.getElementById('versionBadge');
+  if (versionBadge && manifest?.version) {
+    versionBadge.textContent = `v${manifest.version}`;
+  }
+  
   loadPapers();
   
   // Capture current page button
@@ -142,26 +148,58 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    // CSV headers matching your tracker format
-    const headers = ['Title', 'Authors', 'Year', 'Journal/Venue', 'Keywords', 'Status', 'Priority', 'Rating', 'Date Added', 'Key Points', 'Notes', 'Citation', 'DOI/URL', 'Chapter/Topic'];
+    const headers = [
+      'Item Type',
+      'Title',
+      'Authors',
+      'Year',
+      'Keywords',
+      'Journal/Venue',
+      'Volume',
+      'Issue',
+      'Pages',
+      'DOI/URL',
+      'ISSN',
+      'Chapter/Topic',
+      'Abstract',
+      'Relevance',
+      'Status',
+      'Priority',
+      'Rating',
+      'Date Added',
+      'Key Points',
+      'Notes',
+      'Language',
+      'Citation',
+      'PDF'
+    ];
     
-    // Convert papers to CSV rows
-    const csvRows = papers.map(paper => {
+    const csvRows = papers.map((paper, index) => {
+      const normalized = normalizePaperForTracker(paper, index);
       return [
-        `"${(paper.title || '').replace(/"/g, '""')}"`,
-        `"${(paper.authors || '').replace(/"/g, '""')}"`,
-        paper.year || '',
-        `"${(paper.journal || '').replace(/"/g, '""')}"`,
-        `"${(paper.keywords || '').replace(/"/g, '""')}"`,
-        'to-read', // Default status
-        'medium',  // Default priority
-        '',        // Empty rating
-        new Date(paper.savedAt).toISOString().split('T')[0], // Date added
-        `"${(paper.abstract || '').replace(/"/g, '""')}"`, // Key points (using abstract)
-        '',        // Empty notes
-        '',        // Empty citation (will be auto-generated in tracker)
-        `"${(paper.doi || paper.url || '').replace(/"/g, '""')}"`,
-        ''         // Empty chapter
+        formatCsvValue(normalized.itemType || 'article'),
+        formatCsvValue(normalized.title || ''),
+        formatCsvValue(normalized.authors || ''),
+        formatCsvValue(normalized.year || ''),
+        formatCsvValue(normalized.keywords || ''),
+        formatCsvValue(normalized.journal || ''),
+        formatCsvValue(normalized.volume || ''),
+        formatCsvValue(normalized.issue || ''),
+        formatCsvValue(normalized.pages || ''),
+        formatCsvValue(normalized.doi || normalized.url || ''),
+        formatCsvValue(normalized.issn || ''),
+        formatCsvValue(normalized.chapter || ''),
+        formatCsvValue(normalized.abstract || ''),
+        formatCsvValue(normalized.relevance || ''),
+        formatCsvValue(normalized.status || 'to-read'),
+        formatCsvValue(normalized.priority || 'medium'),
+        formatCsvValue(normalized.rating || ''),
+        formatCsvValue(normalized.dateAdded || ''),
+        formatCsvValue(normalized.keyPoints || ''),
+        formatCsvValue(normalized.notes || ''),
+        formatCsvValue(normalized.language || 'en'),
+        formatCsvValue(normalized.citation || ''),
+        formatCsvValue(normalized.pdf || '')
       ].join(',');
     });
     
@@ -694,4 +732,14 @@ function applyTrackerDefaults(paper) {
   paper.pdfFilename = paper.pdfFilename || '';
   paper.hasPDF = Boolean(paper.hasPDF);
   paper.pdfSource = paper.pdfSource || 'none';
+}
+
+function formatCsvValue(value) {
+  if (value === null || value === undefined) {
+    return '""';
+  }
+  
+  const stringValue = String(value).replace(/[\r\n]+/g, ' ').trim();
+  const escaped = stringValue.replace(/"/g, '""');
+  return `"${escaped}"`;
 }
