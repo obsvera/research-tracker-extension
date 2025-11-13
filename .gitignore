@@ -2,3 +2,30 @@
 /Docker.dmg
 /Global virtual teams coordination mechanisms building theory from research in software development.pdf
 /favicon_io.zip
+
+# Build outputs
+dist/
+*.zip
+*.xpi
+*.crx
+
+# Node modules
+node_modules/
+
+# OS files
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
+*.tmp
+.cache/

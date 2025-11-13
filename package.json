@@ -1,0 +1,32 @@
+{
+  "name": "research-paper-tracker-extension",
+  "version": "1.0.0",
+  "description": "Browser extension to capture research papers from academic sites",
+  "scripts": {
+    "build:firefox": "node build.js firefox",
+    "build:chrome": "node build.js chrome",
+    "build:edge": "node build.js edge",
+    "build:opera": "node build.js opera",
+    "build:brave": "node build.js brave",
+    "build:all": "node build.js all",
+    "clean": "rm -rf dist/"
+  },
+  "keywords": [
+    "research",
+    "papers",
+    "academic",
+    "tracker",
+    "browser-extension",
+    "firefox",
+    "chrome",
+    "edge",
+    "opera",
+    "brave"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
