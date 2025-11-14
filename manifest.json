@@ -45,8 +45,10 @@
     "page": "options.html",
     "open_in_tab": false
   },
-  
+
   "web_accessible_resources": [
     "icons/*"
-  ]
+  ],
+
+  "content_security_policy": "script-src 'self'; object-src 'self'"
 }
