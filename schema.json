@@ -1,0 +1,219 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/yourusername/research-tracker-extension/schema/paper.json",
+  "title": "Research Paper Schema",
+  "description": "Schema for research paper metadata in Research Paper Tracker extension",
+  "version": "2.0.0",
+  "type": "object",
+  "required": ["_schemaVersion", "id", "title", "dateAdded"],
+  "properties": {
+    "_schemaVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version of the schema (e.g., '2.0.0')"
+    },
+    "_lastModified": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of last modification"
+    },
+    "id": {
+      "type": ["string", "number"],
+      "description": "Unique identifier for the paper"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Title of the paper"
+    },
+    "authors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["fullName"],
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full name of the author"
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name (given name)"
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name (family name)"
+          },
+          "affiliation": {
+            "type": "string",
+            "description": "Author's institution or affiliation"
+          },
+          "orcid": {
+            "type": "string",
+            "pattern": "^https://orcid.org/\\d{4}-\\d{4}-\\d{4}-\\d{3}[0-9X]$",
+            "description": "ORCID identifier (full URL)"
+          }
+        }
+      },
+      "description": "Array of author objects"
+    },
+    "year": {
+      "type": "string",
+      "pattern": "^\\d{4}$",
+      "description": "Publication year (YYYY format)"
+    },
+    "dateAdded": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when paper was added"
+    },
+    "savedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when paper was saved (legacy compatibility)"
+    },
+    "doi": {
+      "type": "string",
+      "pattern": "^https://doi\\.org/10\\.\\d{4,}/[^\\s]+$",
+      "description": "Digital Object Identifier as full URL (https://doi.org/...)"
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to the paper or article page"
+    },
+    "abstract": {
+      "type": "string",
+      "description": "Paper abstract or summary"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Array of keyword strings"
+    },
+    "journal": {
+      "type": "string",
+      "description": "Journal or venue name"
+    },
+    "volume": {
+      "type": "string",
+      "description": "Volume number"
+    },
+    "issue": {
+      "type": "string",
+      "description": "Issue number"
+    },
+    "pages": {
+      "type": "string",
+      "description": "Page range (e.g., '123-145')"
+    },
+    "publisher": {
+      "type": "string",
+      "description": "Publisher name"
+    },
+    "itemType": {
+      "type": "string",
+      "enum": ["article", "inproceedings", "inbook", "incollection", "phdthesis", "mastersthesis", "techreport", "misc", "book", "proceedings"],
+      "default": "article",
+      "description": "Type of publication (BibTeX-style)"
+    },
+    "publicationType": {
+      "type": "string",
+      "description": "Legacy publication type field (deprecated, use itemType)"
+    },
+    "issn": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{3}[0-9X]$",
+      "description": "ISSN identifier"
+    },
+    "isbn": {
+      "type": "string",
+      "description": "ISBN identifier"
+    },
+    "chapter": {
+      "type": "string",
+      "description": "Chapter or topic category"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["to-read", "reading", "read", "archived"],
+      "default": "to-read",
+      "description": "Reading status"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "default": "medium",
+      "description": "Priority level"
+    },
+    "rating": {
+      "type": ["number", "string"],
+      "minimum": 0,
+      "maximum": 5,
+      "description": "User rating (0-5 stars)"
+    },
+    "relevance": {
+      "type": "string",
+      "description": "Relevance to research"
+    },
+    "keyPoints": {
+      "type": "string",
+      "description": "Key points or findings"
+    },
+    "notes": {
+      "type": "string",
+      "description": "User notes"
+    },
+    "language": {
+      "type": "string",
+      "pattern": "^[a-z]{2}$",
+      "default": "en",
+      "description": "ISO 639-1 language code (e.g., 'en', 'fr', 'de')"
+    },
+    "citation": {
+      "type": "string",
+      "description": "Formatted citation"
+    },
+    "pdf": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to PDF file"
+    },
+    "pdfPath": {
+      "type": "string",
+      "description": "Local file path to PDF"
+    },
+    "pdfFilename": {
+      "type": "string",
+      "description": "PDF filename"
+    },
+    "hasPDF": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether PDF is available"
+    },
+    "pdfSource": {
+      "type": "string",
+      "description": "Source of PDF (e.g., 'publisher', 'arxiv')"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "User-defined tags"
+    },
+    "collections": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Collections this paper belongs to"
+    }
+  },
+  "additionalProperties": false
+}

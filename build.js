@@ -49,6 +49,9 @@ const COMMON_FILES = [
   'options.js',
   'content-script.js',
   'browser-polyfill.min.js',
+  'schema-validator.js',
+  'migration.js',
+  'tracker-detection.js',
   'icons/'
 ];
 

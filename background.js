@@ -1,23 +1,205 @@
 // Background Script - Handles context menus and data storage
 
-// Create context menu on install
-browser.runtime.onInstalled.addListener(() => {
+// Schema version and migration
+const CURRENT_SCHEMA_VERSION = '2.0.0';
+
+// Check and run migration on extension install/update
+browser.runtime.onInstalled.addListener(async (details) => {
+  console.log('Extension installed/updated:', details.reason);
+
+  // Run migration if needed
+  if (details.reason === 'install' || details.reason === 'update') {
+    await checkAndMigrate();
+  }
+
+  // Create context menu on install
+  await createContextMenu();
+
+  // Set default options
+  await setDefaultOptions();
+});
+
+// Also check migration on startup
+browser.runtime.onStartup.addListener(async () => {
+  console.log('Extension starting up');
+  await checkAndMigrate();
+});
+
+async function createContextMenu() {
   browser.contextMenus.create({
     id: 'save-paper',
     title: 'Save to Research Tracker',
     contexts: ['page', 'selection', 'link']
   });
-  
-  // Set default options
-  browser.storage.local.get(['trackerUrl']).then(result => {
-    if (!result.trackerUrl) {
-      browser.storage.local.set({
-        trackerUrl: 'https://yourusername.github.io/claude4-research-tracker',
-        autoOpen: true
-      });
+}
+
+async function setDefaultOptions() {
+  const result = await browser.storage.local.get(['trackerUrl']);
+  if (!result.trackerUrl) {
+    await browser.storage.local.set({
+      trackerUrl: 'https://yourusername.github.io/claude4-research-tracker',
+      autoOpen: true
+    });
+  }
+}
+
+async function checkAndMigrate() {
+  try {
+    const result = await browser.storage.local.get(['savedPapers', 'schemaVersion']);
+    const currentStorageVersion = result.schemaVersion || '1.0.0';
+    const papers = result.savedPapers || [];
+
+    // Check if migration is needed
+    if (currentStorageVersion !== CURRENT_SCHEMA_VERSION || papers.length > 0) {
+      const needsMigration = papers.some(paper => !paper._schemaVersion || paper._schemaVersion !== CURRENT_SCHEMA_VERSION);
+
+      if (needsMigration) {
+        console.log(`Migrating ${papers.length} papers from v${currentStorageVersion} to v${CURRENT_SCHEMA_VERSION}`);
+
+        // Migrate papers
+        const migratedPapers = papers.map(paper => migratePaper(paper));
+
+        // Save migrated papers
+        await browser.storage.local.set({
+          savedPapers: migratedPapers,
+          schemaVersion: CURRENT_SCHEMA_VERSION,
+          lastMigration: new Date().toISOString()
+        });
+
+        console.log(`Migration complete: ${migratedPapers.length} papers migrated to schema v${CURRENT_SCHEMA_VERSION}`);
+
+        // Show notification
+        browser.notifications.create({
+          type: 'basic',
+          iconUrl: 'icons/icon-48.png',
+          title: 'Extension Updated',
+          message: `${migratedPapers.length} papers migrated to new format`
+        });
+      } else {
+        // Update schema version even if no migration needed
+        await browser.storage.local.set({ schemaVersion: CURRENT_SCHEMA_VERSION });
+      }
+    }
+  } catch (error) {
+    console.error('Migration error:', error);
+  }
+}
+
+// Migration functions (inlined for background script)
+function migratePaper(paper) {
+  if (paper._schemaVersion === CURRENT_SCHEMA_VERSION) {
+    return paper;
+  }
+
+  const newPaper = {
+    _schemaVersion: CURRENT_SCHEMA_VERSION,
+    _lastModified: new Date().toISOString(),
+    id: paper.id,
+    title: paper.title || '',
+    authors: normalizeAuthors(paper.authors),
+    dateAdded: normalizeDate(paper.savedAt || paper.dateAdded),
+    savedAt: normalizeDate(paper.savedAt || paper.dateAdded)
+  };
+
+  // Normalize DOI
+  if (paper.doi) {
+    newPaper.doi = normalizeDOI(paper.doi);
+  }
+
+  // Normalize year
+  if (paper.year) {
+    newPaper.year = String(paper.year);
+  }
+
+  // Normalize keywords
+  if (paper.keywords) {
+    newPaper.keywords = Array.isArray(paper.keywords) ? paper.keywords : paper.keywords.split(/[;,]\s*/);
+  }
+
+  // Copy other fields
+  const fieldsToCopy = ['url', 'abstract', 'journal', 'volume', 'issue', 'pages',
+    'publisher', 'issn', 'chapter', 'status', 'priority', 'rating', 'relevance',
+    'keyPoints', 'notes', 'language', 'citation', 'pdf', 'pdfPath', 'pdfFilename',
+    'hasPDF', 'pdfSource', 'tags', 'collections'];
+
+  fieldsToCopy.forEach(field => {
+    if (paper[field] !== undefined && paper[field] !== null) {
+      newPaper[field] = paper[field];
     }
   });
-});
+
+  // Handle itemType
+  if (paper.itemType) {
+    newPaper.itemType = paper.itemType;
+  } else if (paper.publicationType) {
+    newPaper.itemType = inferItemType(paper.publicationType);
+  } else {
+    newPaper.itemType = 'article';
+  }
+
+  // Set defaults
+  if (!newPaper.status) newPaper.status = 'to-read';
+  if (!newPaper.priority) newPaper.priority = 'medium';
+  if (!newPaper.language) newPaper.language = 'en';
+  if (newPaper.hasPDF === undefined) newPaper.hasPDF = Boolean(newPaper.pdf);
+
+  return newPaper;
+}
+
+function normalizeAuthors(authorsInput) {
+  if (!authorsInput) return [];
+  if (Array.isArray(authorsInput) && authorsInput.length > 0 && typeof authorsInput[0] === 'object') {
+    return authorsInput;
+  }
+  if (typeof authorsInput === 'string') {
+    const authorList = authorsInput.split(/;\s*|,\s*and\s+|\s+and\s+/i);
+    return authorList.map(name => {
+      const trimmed = name.trim();
+      if (trimmed.includes(',')) {
+        const parts = trimmed.split(',').map(p => p.trim());
+        return { fullName: `${parts[1]} ${parts[0]}`, firstName: parts[1], lastName: parts[0] };
+      }
+      const words = trimmed.split(/\s+/);
+      if (words.length === 2) {
+        return { fullName: trimmed, firstName: words[0], lastName: words[1] };
+      }
+      return { fullName: trimmed };
+    });
+  }
+  return [];
+}
+
+function normalizeDOI(doi) {
+  if (!doi) return '';
+  if (doi.startsWith('https://doi.org/')) return doi;
+  doi = doi.replace(/^(doi:|DOI:)/i, '').trim();
+  doi = doi.replace(/^https?:\/\/(dx\.)?doi\.org\//, '');
+  return `https://doi.org/${doi}`;
+}
+
+function normalizeDate(dateInput) {
+  if (!dateInput) return new Date().toISOString();
+  if (typeof dateInput === 'string' && dateInput.includes('T')) return dateInput;
+  try {
+    const date = new Date(dateInput);
+    if (!isNaN(date.getTime())) return date.toISOString();
+  } catch (e) {}
+  return new Date().toISOString();
+}
+
+function inferItemType(publicationType) {
+  if (!publicationType) return 'article';
+  const type = publicationType.toLowerCase();
+  const typeMap = {
+    'conference': 'inproceedings',
+    'book': 'book',
+    'chapter': 'inbook',
+    'thesis': 'phdthesis',
+    'report': 'techreport',
+    'preprint': 'misc'
+  };
+  return typeMap[type] || 'article';
+}
 
 // Handle context menu clicks
 browser.contextMenus.onClicked.addListener((info, tab) => {
